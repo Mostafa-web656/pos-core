@@ -1,14 +1,14 @@
 from pathlib import Path
 from datetime import timedelta
 import os
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-5nsqnr%yr4$64bf8es5#1mb2k-8jg_a*pkf0me^+zp18&7absx'
 
-DEBUG = False
-
-ALLOWED_HOSTS = ["*"]
+DEBUG = True
+ALLOWED_HOSTS = ["*.railway.app"]
 
 # Applications
 INSTALLED_APPS = [
@@ -64,10 +64,10 @@ WSGI_APPLICATION = 'pos_core.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default='sqlite:///db.sqlite3',
+        conn_max_age=600
+    )
 }
 
 # Password validation

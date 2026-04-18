@@ -285,6 +285,7 @@ def invoices(request):
     for sale in sales:
         data.append({
             "id": sale.id,
+        
             "date": sale.created_at.strftime("%Y-%m-%d %H:%M"),
             "customer_name": sale.customer.name if sale.customer else None,
             "customer_phone": sale.customer.phone if sale.customer else None,

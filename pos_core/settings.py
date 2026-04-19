@@ -8,8 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-5nsqnr%yr4$64bf8es5#1mb2k-8jg_a*pkf0me^+zp18&7absx'
 
 DEBUG = True
-ALLOWED_HOSTS = ["*.railway.app"]
-
+ALLOWED_HOSTS = ["*"]
 # Applications
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -63,11 +62,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'pos_core.wsgi.application'
 
 # Database
+
 DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3',
-        conn_max_age=600
-    )
+    'default': dj_database_url.config(default=os.environ.get("DATABASE_URL"))
 }
 
 # Password validation
@@ -87,7 +84,6 @@ USE_TZ = True
 # Static files
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Custom user model
 
 AUTH_USER_MODEL = "accounts.CustomUser"

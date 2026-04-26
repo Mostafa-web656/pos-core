@@ -9,7 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 # ========================
 SECRET_KEY = 'django-insecure-change-this'
-DEBUG = True
+
+DEBUG = True  # في الإنتاج خليها False بعدين
 
 ALLOWED_HOSTS = [
     "mostafasaeed.pythonanywhere.com",
@@ -35,10 +36,10 @@ INSTALLED_APPS = [
 ]
 
 # ========================
-# MIDDLEWARE
+# MIDDLEWARE (مهم الترتيب)
 # ========================
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # لازم الأول
 
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -53,7 +54,7 @@ MIDDLEWARE = [
 ]
 
 # ========================
-# ROOT PROJECT (IMPORTANT)
+# ROOT
 # ========================
 ROOT_URLCONF = 'pos_core.urls'
 WSGI_APPLICATION = 'pos_core.wsgi.application'
@@ -81,7 +82,10 @@ TEMPLATES = [
 # ========================
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+        default=os.environ.get(
+            "DATABASE_URL",
+            f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+        )
     )
 }
 
@@ -106,11 +110,15 @@ SIMPLE_JWT = {
 }
 
 # ========================
-# CORS
+# CORS (FIXED 100%)
 # ========================
 CORS_ALLOWED_ORIGINS = [
     "https://pos-dashboard-oso.pages.dev",
 ]
+
+# 🔥 مهم جدًا للتجربة (لو لسه في مشكلة)
+# سيبه مؤقتًا لحد ما تتأكد
+# CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 

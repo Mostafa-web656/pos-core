@@ -1,26 +1,21 @@
-# pos_core/urls.py
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.http import JsonResponse
-from sales.views import invoices
 
-def home(request):
+def api_root(request):
     return JsonResponse({"message": "Welcome to POS System"})
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # JWT Authentication
-    path('api/token/', TokenObtainPairView.as_view()),
-    path('api/token/refresh/', TokenRefreshView.as_view()),
 
-    # Apps
+    path('api/', lambda request: JsonResponse({"TEST": "OK"})),
+
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
     path('api/accounts/', include('accounts.urls')),
     path('api/products/', include('products.urls')),
-    path('api/sales/', include('sales.urls')),  # يحتوي على invoices و create
-        path('api/invoices/', invoices),
-
-
-    # Home
-    path('', home),
+    path('api/sales/', include('sales.urls')),
 ]

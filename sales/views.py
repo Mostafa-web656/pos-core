@@ -227,12 +227,22 @@ def monthly_report(request):
 # =========================
 # INVOICES
 # =========================
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+
+from .models import Sale, SaleItem
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def invoice_detail(request, id):
     shop = request.user.shop
 
-    sale = Sale.objects.get(id=id, shop=shop)
+    # ✅ آمن بدل get (يمنع crash)
+    sale = get_object_or_404(Sale, id=id, shop=shop)
+
     items = SaleItem.objects.filter(sale=sale)
 
     return Response({
@@ -240,14 +250,17 @@ def invoice_detail(request, id):
         "date": sale.created_at.strftime("%Y-%m-%d %H:%M"),
         "customer_name": sale.customer.name if sale.customer else None,
         "customer_phone": sale.customer.phone if sale.customer else None,
+        "subtotal": float(sale.subtotal),
+        "tax_amount": float(sale.tax_amount),
         "total": float(sale.total),
+
         "items": [
             {
-                "name": i.product.name,
-                "qty": i.qty,
-                "price": float(i.price),
-                "total": float(i.qty * i.price)
+                "name": item.product.name,
+                "qty": item.qty,
+                "price": float(item.price),
+                "total": float(item.qty * item.price),
             }
-            for i in items
+            for item in items
         ]
     })

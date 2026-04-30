@@ -1,20 +1,20 @@
-from django.urls import path
-from . import views
+from django.contrib import admin
+from django.urls import path, include
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.http import JsonResponse
-from .views import invoice_detail
-def sales_root(request):
-    return JsonResponse({"message": "Sales API working"})
+
+def api_root(request):
+    return JsonResponse({"message": "POS API Working"})
 
 urlpatterns = [
-        path("", sales_root),  # 👈 ده المهم
+    path('admin/', admin.site.urls),
 
-    path("products/", views.products_api),
-    path("products/<int:id>/", views.delete_product),
+    path('api/', api_root),  # 🔥 FIXED (بدل lambda الغبي)
 
-    path("create/", views.create_sale),
-path("invoices/<int:id>/", invoice_detail),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
-
-    path("reports/daily/", views.daily_report),
-    path("reports/monthly/", views.monthly_report),
+    path('api/accounts/', include('accounts.urls')),
+    path('api/products/', include('products.urls')),
+    path('api/sales/', include('sales.urls')),
 ]

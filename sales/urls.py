@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from django.http import JsonResponse
-
+from .views import invoice_detail
 def sales_root(request):
     return JsonResponse({"message": "Sales API working"})
 
@@ -12,8 +12,8 @@ urlpatterns = [
     path("products/<int:id>/", views.delete_product),
 
     path("create/", views.create_sale),
+path("invoices/<int:id>/", invoice_detail),
 
-    path("invoices/", views.invoices),
 
     path("reports/daily/", views.daily_report),
     path("reports/monthly/", views.monthly_report),

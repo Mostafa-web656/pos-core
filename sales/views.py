@@ -129,7 +129,6 @@ def create_sale(request):
 # =========================
 # DAILY REPORT
 # =========================
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def daily_report(request):
@@ -138,13 +137,45 @@ def daily_report(request):
 
     sales = Sale.objects.filter(created_at__date=today, shop=shop)
 
+    # إجمالي اليوم
     total_sales = SaleItem.objects.filter(
         sale__in=sales
     ).aggregate(total=Sum(F("price") * F("qty")))["total"] or 0
 
+    orders_count = sales.count()
+
+    # 📊 Chart حسب الساعة (مهم للرسم)
+    chart = (
+        sales
+        .annotate(hour=TruncHour("created_at"))
+        .values("hour")
+        .annotate(total=Sum("total"))
+        .order_by("hour")
+    )
+
+    chart_data = [
+        {
+            "hour": c["hour"].strftime("%H:%M"),
+            "total": float(c["total"])
+        }
+        for c in chart
+    ]
+
+    # 🔥 أعلى ساعة مبيعات
+    best_hour = sales.values("created_at__hour").annotate(
+        total=Sum("total")
+    ).order_by("-total").first()
+
+    best_time = {
+        "hour": best_hour["created_at__hour"],
+        "total": float(best_hour["total"])
+    } if best_hour else None
+
     return Response({
         "total_sales": float(total_sales),
-        "orders": sales.count()
+        "orders": orders_count,
+        "best_hour": best_time,
+        "chart": chart_data
     })
 
 

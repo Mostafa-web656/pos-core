@@ -230,37 +230,25 @@ def monthly_report(request):
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 
-from .models import Sale, SaleItem
+from .models import Sale
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def invoice_detail(request, id):
+def invoices(request):
     shop = request.user.shop
 
-    # ✅ آمن بدل get (يمنع crash)
-    sale = get_object_or_404(Sale, id=id, shop=shop)
+    sales = Sale.objects.filter(shop=shop).order_by("-created_at")
 
-    items = SaleItem.objects.filter(sale=sale)
+    data = []
 
-    return Response({
-        "id": sale.id,
-        "date": sale.created_at.strftime("%Y-%m-%d %H:%M"),
-        "customer_name": sale.customer.name if sale.customer else None,
-        "customer_phone": sale.customer.phone if sale.customer else None,
-        "subtotal": float(sale.subtotal),
-        "tax_amount": float(sale.tax_amount),
-        "total": float(sale.total),
+    for sale in sales:
+        data.append({
+            "id": sale.id,
+            "date": sale.created_at.strftime("%Y-%m-%d %H:%M"),
+            "customer_name": sale.customer.name if sale.customer else None,
+            "total": float(sale.total),
+        })
 
-        "items": [
-            {
-                "name": item.product.name,
-                "qty": item.qty,
-                "price": float(item.price),
-                "total": float(item.qty * item.price),
-            }
-            for item in items
-        ]
-    })
+    return Response(data)

@@ -151,7 +151,6 @@ def daily_report(request):
 # =========================
 # MONTHLY REPORT
 # =========================
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def monthly_report(request):
@@ -165,13 +164,46 @@ def monthly_report(request):
         created_at__month=month
     )
 
+    # 📊 إجمالي
     total = sales.aggregate(total=Sum("total"))["total"] or 0
+    count = sales.count()
+
+    average = total / count if count > 0 else 0
+
+    # 📈 رسم يومي
+    chart = (
+        sales
+        .annotate(day=TruncHour("created_at"))
+        .values("day")
+        .annotate(total=Sum("total"))
+        .order_by("day")
+    )
+
+    chart_data = [
+        {
+            "day": c["day"].strftime("%Y-%m-%d %H:%M"),
+            "total": float(c["total"])
+        }
+        for c in chart
+    ]
+
+    # 🔥 أفضل يوم
+    best = sales.values("created_at__date").annotate(
+        total=Sum("total")
+    ).order_by("-total").first()
+
+    best_day = {
+        "day": str(best["created_at__date"]),
+        "total": float(best["total"])
+    } if best else None
 
     return Response({
         "total": float(total),
-        "count": sales.count()
+        "count": count,
+        "average": float(average),
+        "best_day": best_day,
+        "chart": chart_data
     })
-
 
 # =========================
 # INVOICES

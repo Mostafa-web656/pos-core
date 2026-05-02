@@ -227,13 +227,6 @@ def monthly_report(request):
 # =========================
 # INVOICES
 # =========================
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
-from .models import Sale
-
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def invoices(request):
@@ -248,6 +241,7 @@ def invoices(request):
             "id": sale.id,
             "date": sale.created_at.strftime("%Y-%m-%d %H:%M"),
             "customer_name": sale.customer.name if sale.customer else None,
+            "customer_phone": sale.customer.phone if sale.customer else None,
             "total": float(sale.total),
         })
 

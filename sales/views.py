@@ -60,7 +60,6 @@ def delete_product(request, id):
 # =========================
 # CREATE SALE
 # =========================
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @transaction.atomic
@@ -93,12 +92,30 @@ def create_sale(request):
         total=0
     )
 
-    subtotal = Decimal(0)
+    subtotal = Decimal("0")
 
     for item in items:
-        product = Product.objects.get(id=item["product_id"], shop=shop)
-        qty = int(item["qty"])
+        qty = Decimal(str(item["qty"]))
 
+        # 🔥 LOCK PRODUCT (منع double selling في اللايف)
+        product = Product.objects.select_for_update().get(
+            id=item["product_id"],
+            shop=shop
+        )
+
+        # 🔴 Out of stock check
+        if product.is_out_of_stock():
+            return Response({
+                "error": f"{product.name} is out of stock"
+            }, status=400)
+
+        # 🔴 Not enough stock
+        if product.stock < qty:
+            return Response({
+                "error": f"Only {product.stock} {product.unit_type} left for {product.name}"
+            }, status=400)
+
+        # 🧾 create sale item
         SaleItem.objects.create(
             sale=sale,
             product=product,
@@ -106,10 +123,12 @@ def create_sale(request):
             price=product.price
         )
 
-        subtotal += Decimal(product.price) * qty
+        subtotal += product.price * qty
 
-        product.stock -= qty
-        product.save()
+        # 🔥 SAFE STOCK UPDATE (atomic)
+        Product.objects.filter(id=product.id).update(
+            stock=F("stock") - qty
+        )
 
     tax_amount = subtotal * tax_rate / Decimal("100")
     total = subtotal + tax_amount
@@ -124,7 +143,6 @@ def create_sale(request):
         "sale_id": sale.id,
         "total": float(total)
     })
-
 
 # =========================
 # DAILY REPORT
@@ -249,36 +267,7 @@ def invoice_detail(request, id):
         "customer_name": sale.customer.name if sale.customer else None,
         "customer_phone": sale.customer.phone if sale.customer else None,
         "total": float(sale.total),
-        "items": [
-            {
-                "name": i.product.name,
-                "qty": i.qty,
-                "price": float(i.price),
-                "total": float(i.qty * i.price)
-            }
-            for i in items
-        ]
-    })
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def invoice_detail(request, id):
-    shop = request.user.shop
 
-    try:
-        sale = Sale.objects.get(id=id, shop=shop)
-    except Sale.DoesNotExist:
-        return Response({"error": "Not found"}, status=404)
-
-    items = SaleItem.objects.filter(sale=sale)
-
-    return Response({
-        "id": sale.id,
-        "date": sale.created_at.strftime("%Y-%m-%d %H:%M"),
-        "customer_name": sale.customer.name if sale.customer else None,
-        "customer_phone": sale.customer.phone if sale.customer else None,
-        "total": float(sale.total),
-
-        # 🔥 مهم جدًا
         "items": [
             {
                 "name": i.product.name,

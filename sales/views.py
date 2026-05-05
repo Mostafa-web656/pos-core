@@ -137,18 +137,19 @@ def daily_report(request):
 
     sales = Sale.objects.filter(created_at__date=today, shop=shop)
 
-    total_sales = SaleItem.objects.filter(
-        sale__in=sales
-    ).aggregate(total=Sum(F("price") * F("qty")))["total"] or 0
+    # ✅ نفس منطق الشهري (بالضريبة)
+    total_sales = sales.aggregate(
+        total=Sum("total")
+    )["total"] or 0
 
     orders_count = sales.count()
 
-    # 🔥 FIX مهم: hour بدل day
+    # 📈 chart (برضه بالضريبة)
     chart = (
         sales
         .annotate(hour=TruncHour("created_at"))
         .values("hour")
-        .annotate(total=Sum("total"))
+        .annotate(total=Sum("total"))  # ✅ مهم جدًا
         .order_by("hour")
     )
 
@@ -160,13 +161,16 @@ def daily_report(request):
         for c in chart
     ]
 
+    # 🔥 Best Hour (إضافة احترافية)
+    best = sorted(chart_data, key=lambda x: x["total"], reverse=True)
+    best_hour = best[0] if best else None
+
     return Response({
         "total_sales": float(total_sales),
         "orders": orders_count,
-        "chart": chart_data
+        "chart": chart_data,
+        "best_hour": best_hour
     })
-
-
 # =========================
 # MONTHLY REPORT
 # =========================

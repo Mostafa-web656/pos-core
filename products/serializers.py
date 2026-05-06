@@ -10,6 +10,6 @@ class ProductSerializer(serializers.ModelSerializer):
             "name",
             "price",
             "stock",
-            "unit_type",
-            "low_stock_alert",
+            "created_at",
+            "updated_at",
         ]

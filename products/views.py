@@ -7,24 +7,38 @@ from accounts.models import Shop
 from .serializers import ProductSerializer
 
 
-def get_shop(user):
-    return Shop.objects.filter(owner=user).first()
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def products_view(request):
     user = request.user
 
-    # 🔥 حماية من crash لو مفيش shop
-    if not hasattr(user, "shop") or user.shop is None:
-        return Response(
-            {"error": "User has no shop assigned"},
-            status=400
+    # ✅ استخدم الدالة الصح
+    shop = Shop.objects.filter(owner=user).first()
+
+    if not shop:
+        return Response({"error": "No shop found for this user"}, status=400)
+
+    # ================= GET =================
+    if request.method == "GET":
+        search = request.GET.get("search", "")
+
+        products = Product.objects.filter(
+            shop=shop,
+            name__icontains=search
+        ).order_by("-id")
+
+        serializer = ProductSerializer(products, many=True)
+        return Response(serializer.data)
+
+    # ================= POST =================
+    if request.method == "POST":
+        data = request.data
+
+        product = Product.objects.create(
+            name=data["name"],
+            price=data["price"],
+            stock=data.get("stock", 0),
+            shop=shop
         )
 
-    shop = user.shop
-
-    products = Product.objects.filter(shop=shop)
-
-    serializer = ProductSerializer(products, many=True)
-    return Response(serializer.data)
+        return Response(ProductSerializer(product).data)

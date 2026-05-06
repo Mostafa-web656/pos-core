@@ -7,61 +7,49 @@ from .serializers import ProductSerializer
 
 # =========================
 # LIST & CREATE PRODUCTS
-# =========================
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def products_view(request):
     user = request.user
 
-    # التأكد من أن المستخدم لديه متجر
     if not hasattr(user, "shop") or not user.shop:
         return Response({"error": "User has no shop"}, status=400)
 
-    search = request.GET.get("search", "")
+    if request.method == "GET":
+        search = request.GET.get("search", "")
 
-    # 🔍 جلب المنتجات مع البحث
-    if request.method == 'GET':
         products = Product.objects.filter(
             shop=user.shop,
             name__icontains=search
         ).order_by('-id')
-        serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data)
 
-    # ➕ إضافة منتج
-    if request.method == 'POST':
-        serializer = ProductSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(shop=user.shop)
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
+        return Response([
+            {
+                "id": p.id,
+                "name": p.name,
+                "price": float(p.price),
+                "stock": p.stock,
+            }
+            for p in products
+        ])
 
+    if request.method == "POST":
+        try:
+            data = request.data
 
-# =========================
-# UPDATE & DELETE PRODUCT
-# =========================
-@api_view(['PUT', 'DELETE'])
-@permission_classes([IsAuthenticated])
-def product_detail(request, id):
-    user = request.user
+            product = Product.objects.create(
+                name=data["name"],
+                price=data["price"],
+                stock=data.get("stock", 0),
+                shop=user.shop
+            )
 
-    if not hasattr(user, "shop") or not user.shop:
-        return Response({"error": "User has no shop"}, status=400)
+            return Response({
+                "id": product.id,
+                "name": product.name,
+                "price": float(product.price),
+                "stock": product.stock,
+            })
 
-    try:
-        product = Product.objects.get(id=id, shop=user.shop)
-    except Product.DoesNotExist:
-        return Response({"error": "Product not found"}, status=404)
-
-    # ✏️ تعديل المنتج
-    if request.method == 'PUT':
-        serializer = ProductSerializer(product, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
-
-    # 🗑 حذف المنتج
-    if request.method == 'DELETE':
-        product.delete()
-        return Response({"message": "Product deleted successfully"})
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)

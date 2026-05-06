@@ -256,23 +256,26 @@ def invoices(request):
 
     sales = Sale.objects.filter(shop=shop).order_by("-id")
 
-    return Response([
-        {
+    data = []
+
+    for s in sales:
+        items = SaleItem.objects.filter(sale=s).select_related("product")
+
+        data.append({
             "id": s.id,
             "date": s.created_at.strftime("%Y-%m-%d %H:%M"),
             "customer_name": s.customer.name if s.customer else "Walk-in",
             "total": float(s.total),
 
-            # 🔥 أهم حاجة: الأصناف
             "items": [
                 {
-                    "name": i.product.name,
+                    "name": i.product.name if i.product else "Deleted",
                     "qty": float(i.qty),
                     "price": float(i.price),
                     "total": float(i.qty * i.price),
                 }
-                for i in SaleItem.objects.filter(sale=s)
+                for i in items
             ]
-        }
-        for s in sales
-    ])
+        })
+
+    return Response(data)

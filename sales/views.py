@@ -251,31 +251,41 @@ def monthly_report(request):
 # =========================
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def invoices(request):
-    shop = request.user.shop
+def invoice_detail(request, id):
+    user = request.user
 
-    sales = Sale.objects.filter(shop=shop).order_by("-id")
+    if not hasattr(user, "shop") or not user.shop:
+        return Response({"error": "User has no shop"}, status=400)
 
-    data = []
+    shop = user.shop
 
-    for s in sales:
-        items = SaleItem.objects.filter(sale=s).select_related("product")
+    try:
+        sale = Sale.objects.select_related("customer").get(id=id, shop=shop)
+    except Sale.DoesNotExist:
+        return Response({"error": "Not found"}, status=404)
 
-        data.append({
-            "id": s.id,
-            "date": s.created_at.strftime("%Y-%m-%d %H:%M"),
-            "customer_name": s.customer.name if s.customer else "Walk-in",
-            "total": float(s.total),
+    # 🔥 مهم: نجيب المنتجات معاه (أسرع + آمن)
+    items = SaleItem.objects.select_related("product").filter(sale=sale)
 
-            "items": [
-                {
-                    "name": i.product.name if i.product else "Deleted",
-                    "qty": float(i.qty),
-                    "price": float(i.price),
-                    "total": float(i.qty * i.price),
-                }
-                for i in items
-            ]
-        })
+    return Response({
+        "id": sale.id,
+        "date": sale.created_at.strftime("%Y-%m-%d %H:%M"),
 
-    return Response(data)
+        "customer_name": sale.customer.name if sale.customer else "Walk-in",
+        "customer_phone": sale.customer.phone if sale.customer else "-",
+
+        "subtotal": float(sale.subtotal),
+        "tax": float(sale.tax_amount),
+        "total": float(sale.total),
+
+        # 🔥 أهم جزء
+        "items": [
+            {
+                "name": i.product.name if i.product else "Deleted product",
+                "qty": float(i.qty),
+                "price": float(i.price),
+                "total": float(i.qty * i.price)
+            }
+            for i in items
+        ]
+    })

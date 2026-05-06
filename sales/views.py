@@ -61,53 +61,82 @@ def delete_product(request, id):
 # CREATE SALE
 # =========================
 
+
+from decimal import Decimal
+from django.db import transaction
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from products.models import Product
+from sales.models import Sale, SaleItem
+from customers.models import Customer
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @transaction.atomic
 def create_sale(request):
     user = request.user
 
+    # check shop
     if not hasattr(user, "shop") or not user.shop:
         return Response({"error": "User has no shop"}, status=400)
 
     shop = user.shop
+
     items = request.data.get("items", [])
     customer_id = request.data.get("customer")
-    tax_rate = Decimal(request.data.get("tax_rate") or 0)
+    tax_rate = Decimal(str(request.data.get("tax_rate") or 0))
 
     if not items:
         return Response({"error": "No items provided"}, status=400)
 
+    # customer
     customer = None
     if customer_id:
         customer = Customer.objects.filter(id=customer_id, shop=shop).first()
 
+    # create sale
     sale = Sale.objects.create(
         user=user,
         shop=shop,
         customer=customer,
         tax_rate=tax_rate,
-        subtotal=0,
-        tax_amount=0,
-        total=0
+        subtotal=Decimal("0"),
+        tax_amount=Decimal("0"),
+        total=Decimal("0")
     )
 
-    subtotal = Decimal(0)
+    subtotal = Decimal("0")
 
+    # process items
     for item in items:
-        product = Product.objects.get(id=item["product_id"], shop=shop)
-        qty = int(item["qty"])
+        try:
+            product = Product.objects.get(
+                id=item["product_id"],
+                shop=shop
+            )
+        except Product.DoesNotExist:
+            continue
+
+        qty = int(item.get("qty", 0))
+        if qty <= 0:
+            continue
+
+        price = Decimal(str(product.price))
 
         SaleItem.objects.create(
             sale=sale,
             product=product,
             qty=qty,
-            price=product.price
+            price=price
         )
 
-        subtotal += Decimal(product.price) * qty
+        subtotal += price * qty
 
-        product.stock -= qty
+        # update stock safely
+        product.stock = max(0, product.stock - qty)
         product.save()
 
     tax_amount = subtotal * tax_rate / Decimal("100")
@@ -123,7 +152,6 @@ def create_sale(request):
         "sale_id": sale.id,
         "total": float(total)
     })
-
 
 # =========================
 # DAILY REPORT

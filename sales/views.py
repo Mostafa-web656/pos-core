@@ -73,7 +73,6 @@ def create_sale(request):
     shop = user.shop
     items = request.data.get("items", [])
     customer_id = request.data.get("customer")
-
     tax_rate = Decimal(request.data.get("tax_rate") or 0)
 
     if not items:
@@ -97,20 +96,8 @@ def create_sale(request):
 
     for item in items:
         product = Product.objects.get(id=item["product_id"], shop=shop)
-        qty = Decimal(item["qty"])
+        qty = int(item["qty"])
 
-        # 🚨 CHECK STOCK (مهم جدًا)
-        if product.stock <= 0:
-            return Response({
-                "error": f"{product.name} out of stock"
-            }, status=400)
-
-        if product.stock < qty:
-            return Response({
-                "error": f"Not enough stock for {product.name}"
-            }, status=400)
-
-        # 🧾 create sale item
         SaleItem.objects.create(
             sale=sale,
             product=product,
@@ -120,7 +107,6 @@ def create_sale(request):
 
         subtotal += Decimal(product.price) * qty
 
-        # 🔥 خصم المخزون الذكي
         product.stock -= qty
         product.save()
 

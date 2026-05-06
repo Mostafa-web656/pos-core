@@ -9,11 +9,11 @@ urlpatterns = [
     path("", sales_root),
 
     # ✅ products
-    #path("products/", views.products_api),
-    #path("products/<int:id>/", views.delete_product),
+    path("products/", views.products_api),
+    path("products/<int:id>/", views.delete_product),
 
     # ✅ create sale
-    #path("create/", views.create_sale),
+    path("create/", views.create_sale),
 
     # ✅ invoices
     #path("invoices/", views.invoices),

@@ -13,7 +13,7 @@ urlpatterns = [
     #path("products/<int:id>/", views.delete_product),
 
     # ✅ create sale
-    path("create/", views.create_sale),
+    #path("create/", views.create_sale),
 
     # ✅ invoices
     #path("invoices/", views.invoices),

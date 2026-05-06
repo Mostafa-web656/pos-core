@@ -9,15 +9,11 @@ class Product(models.Model):
 
     shop = models.ForeignKey(
         Shop,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True
+        on_delete=models.CASCADE
     )
 
-    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        if self.shop:
-            return f"{self.name} ({self.shop.name})"
         return self.name

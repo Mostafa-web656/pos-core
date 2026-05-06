@@ -232,6 +232,36 @@ def monthly_report(request):
 # =========================
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def invoices(request):
+
+    shop = request.user.shop
+
+    sales = Sale.objects.filter(
+        shop=shop
+    ).order_by("-created_at")
+
+    data = []
+
+    for sale in sales:
+        data.append({
+            "id": sale.id,
+
+            "date": sale.created_at.strftime(
+                "%Y-%m-%d %H:%M"
+            ),
+
+            "customer_name": (
+                sale.customer.name
+                if sale.customer else None
+            ),
+
+            "total": float(sale.total),
+        })
+
+    return Response(data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def invoice_detail(request, id):
 
     shop = request.user.shop

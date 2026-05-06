@@ -233,58 +233,113 @@ def monthly_report(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def invoice_detail(request, id):
+
     shop = request.user.shop
 
     try:
         sale = Sale.objects.get(id=id, shop=shop)
+
     except Sale.DoesNotExist:
-        return Response({"error": "Not found"}, status=404)
+        return Response(
+            {"error": "Not found"},
+            status=404
+        )
 
     items = SaleItem.objects.filter(sale=sale)
 
     return Response({
         "id": sale.id,
-        "date": sale.created_at.strftime("%Y-%m-%d %H:%M"),
-        "customer_name": sale.customer.name if sale.customer else None,
-        "customer_phone": sale.customer.phone if sale.customer else None,
+
+        "date": sale.created_at.strftime(
+            "%Y-%m-%d %H:%M"
+        ),
+
+        "customer_name": (
+            sale.customer.name
+            if sale.customer else None
+        ),
+
+        "customer_phone": (
+            sale.customer.phone
+            if sale.customer else None
+        ),
+
         "total": float(sale.total),
+
         "items": [
             {
                 "name": i.product.name,
+
                 "qty": i.qty,
+
                 "price": float(i.price),
-                "total": float(i.qty * i.price)
+
+                "total": float(
+                    i.qty * i.price
+                )
             }
+
             for i in items
         ]
     })
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def invoice_detail(request, id):
+
     shop = request.user.shop
 
     try:
-        sale = Sale.objects.get(id=id, shop=shop)
-    except Sale.DoesNotExist:
-        return Response({"error": "Not found"}, status=404)
+        sale = Sale.objects.get(
+            id=id,
+            shop=shop
+        )
 
-    items = SaleItem.objects.filter(sale=sale)
+    except Sale.DoesNotExist:
+        return Response(
+            {"error": "Not found"},
+            status=404
+        )
+
+    items = SaleItem.objects.filter(
+        sale=sale
+    )
 
     return Response({
+
         "id": sale.id,
-        "date": sale.created_at.strftime("%Y-%m-%d %H:%M"),
-        "customer_name": sale.customer.name if sale.customer else None,
-        "customer_phone": sale.customer.phone if sale.customer else None,
+
+        "date": sale.created_at.strftime(
+            "%Y-%m-%d %H:%M"
+        ),
+
+        "customer_name": (
+            sale.customer.name
+            if sale.customer else None
+        ),
+
+        "customer_phone": (
+            sale.customer.phone
+            if sale.customer else None
+        ),
+
         "total": float(sale.total),
 
         # 🔥 مهم جدًا
         "items": [
             {
                 "name": i.product.name,
+
                 "qty": i.qty,
+
                 "price": float(i.price),
-                "total": float(i.qty * i.price)
+
+                "total": float(
+                    i.qty * i.price
+                )
             }
+
             for i in items
         ]
     })

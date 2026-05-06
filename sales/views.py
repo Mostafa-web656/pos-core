@@ -260,6 +260,36 @@ def monthly_report(request):
 # =========================
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def invoices(request):
+
+    shop = request.user.shop
+
+    sales = Sale.objects.filter(
+        shop=shop
+    ).order_by("-created_at")
+
+    data = []
+
+    for sale in sales:
+        data.append({
+            "id": sale.id,
+
+            "date": sale.created_at.strftime(
+                "%Y-%m-%d %H:%M"
+            ),
+
+            "customer_name": (
+                sale.customer.name
+                if sale.customer else None
+            ),
+
+            "total": float(sale.total),
+        })
+
+    return Response(data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def invoice_detail(request, id):
 
     shop = request.user.shop
@@ -276,9 +306,7 @@ def invoice_detail(request, id):
             status=404
         )
 
-    items = SaleItem.objects.filter(
-        sale=sale
-    )
+    items = SaleItem.objects.filter(sale=sale)
 
     return Response({
 
@@ -290,32 +318,25 @@ def invoice_detail(request, id):
 
         "customer_name": (
             sale.customer.name
-            if sale.customer else None
+            if sale.customer else "Walk-in"
         ),
 
         "customer_phone": (
             sale.customer.phone
-            if sale.customer else None
+            if sale.customer else "-"
         ),
 
         "total": float(sale.total),
 
         "items": [
             {
-                "id": i.id,
-
-                "name": (
-                    i.product.name
-                    if i.product else "Deleted Product"
-                ),
+                "name": i.product.name,
 
                 "qty": i.qty,
 
                 "price": float(i.price),
 
-                "total": float(
-                    i.qty * i.price
-                )
+                "total": float(i.qty * i.price)
             }
 
             for i in items

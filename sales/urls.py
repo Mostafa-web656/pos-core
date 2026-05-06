@@ -16,8 +16,8 @@ urlpatterns = [
     path("create/", views.create_sale),
 
     # ✅ invoices
-    #path("invoices/", views.invoices),
-    #path("invoices/<int:id>/", views.invoice_detail),
+    path("invoices/", views.invoices),
+    path("invoices/<int:id>/", views.invoice_detail),
 
     # ✅ reports
     path("reports/daily/", views.daily_report),

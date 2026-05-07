@@ -256,44 +256,6 @@ def monthly_report(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def invoices(request):
-
-    shop = request.user.shop
-
-    sales = Sale.objects.filter(
-        shop=shop
-    ).order_by("-created_at")
-
-    data = []
-
-    for sale in sales:
-
-        items_count = SaleItem.objects.filter(
-            sale=sale
-        ).count()
-
-        data.append({
-            "id": sale.id,
-
-            "date": sale.created_at.strftime(
-                "%Y-%m-%d %H:%M"
-            ),
-
-            "customer_name": (
-                sale.customer.name
-                if sale.customer else "Walk-in"
-            ),
-
-            "total": float(sale.total),
-
-            "items_count": items_count
-        })
-
-    return Response(data)
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
 def invoice_detail(request, id):
 
     shop = request.user.shop
@@ -309,7 +271,10 @@ def invoice_detail(request, id):
             "error": "Not found"
         }, status=404)
 
-    items = SaleItem.objects.filter(
+    # 🔥 مهم جدًا
+    items = SaleItem.objects.select_related(
+        "product"
+    ).filter(
         sale=sale
     )
 
@@ -331,21 +296,25 @@ def invoice_detail(request, id):
             if sale.customer else "-"
         ),
 
-        "subtotal": float(sale.subtotal),
-
-        "tax_amount": float(sale.tax_amount),
-
         "total": float(sale.total),
 
+        # 🔥 الأصناف
         "items": [
             {
-                "name": i.product.name,
+                "id": i.id,
+
+                "name": (
+                    i.product.name
+                    if i.product else "Deleted Product"
+                ),
 
                 "qty": i.qty,
 
                 "price": float(i.price),
 
-                "total": float(i.qty * i.price)
+                "total": float(
+                    i.qty * i.price
+                )
             }
 
             for i in items

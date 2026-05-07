@@ -2,14 +2,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from django.utils import timezone
-from django.db.models import Sum, F
+from django.db.models import Sum
 from django.db.models.functions import TruncHour
 
-import calendar
 from decimal import Decimal
 
 from products.models import Product
@@ -52,9 +49,15 @@ def delete_product(request, id):
     try:
         product = Product.objects.get(id=id, shop=user.shop)
         product.delete()
-        return Response({"status": "deleted"})
+
+        return Response({
+            "status": "deleted"
+        })
+
     except Product.DoesNotExist:
-        return Response({"error": "Product not found"}, status=404)
+        return Response({
+            "error": "Product not found"
+        }, status=404)
 
 
 # =========================
@@ -65,22 +68,32 @@ def delete_product(request, id):
 @permission_classes([IsAuthenticated])
 @transaction.atomic
 def create_sale(request):
+
     user = request.user
 
     if not hasattr(user, "shop") or not user.shop:
-        return Response({"error": "User has no shop"}, status=400)
+        return Response({
+            "error": "User has no shop"
+        }, status=400)
 
     shop = user.shop
+
     items = request.data.get("items", [])
     customer_id = request.data.get("customer")
     tax_rate = Decimal(request.data.get("tax_rate") or 0)
 
     if not items:
-        return Response({"error": "No items provided"}, status=400)
+        return Response({
+            "error": "No items provided"
+        }, status=400)
 
     customer = None
+
     if customer_id:
-        customer = Customer.objects.filter(id=customer_id, shop=shop).first()
+        customer = Customer.objects.filter(
+            id=customer_id,
+            shop=shop
+        ).first()
 
     sale = Sale.objects.create(
         user=user,
@@ -92,10 +105,15 @@ def create_sale(request):
         total=0
     )
 
-    subtotal = Decimal(0)
+    subtotal = Decimal("0")
 
     for item in items:
-        product = Product.objects.get(id=item["product_id"], shop=shop)
+
+        product = Product.objects.get(
+            id=item["product_id"],
+            shop=shop
+        )
+
         qty = int(item["qty"])
 
         SaleItem.objects.create(
@@ -124,30 +142,34 @@ def create_sale(request):
         "total": float(total)
     })
 
+
 # =========================
 # DAILY REPORT
 # =========================
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def daily_report(request):
+
     shop = request.user.shop
     today = timezone.now().date()
 
-    sales = Sale.objects.filter(created_at__date=today, shop=shop)
+    sales = Sale.objects.filter(
+        created_at__date=today,
+        shop=shop
+    )
 
-    # ✅ نفس منطق الشهري (بالضريبة)
     total_sales = sales.aggregate(
         total=Sum("total")
     )["total"] or 0
 
     orders_count = sales.count()
 
-    # 📈 chart (برضه بالضريبة)
     chart = (
         sales
         .annotate(hour=TruncHour("created_at"))
         .values("hour")
-        .annotate(total=Sum("total"))  # ✅ مهم جدًا
+        .annotate(total=Sum("total"))
         .order_by("hour")
     )
 
@@ -159,25 +181,36 @@ def daily_report(request):
         for c in chart
     ]
 
-    # 🔥 Best Hour (إضافة احترافية)
-    best = sorted(chart_data, key=lambda x: x["total"], reverse=True)
-    best_hour = best[0] if best else None
-
     return Response({
         "total_sales": float(total_sales),
         "orders": orders_count,
-        "chart": chart_data,
-        "best_hour": best_hour
+        "chart": chart_data
     })
+
+
 # =========================
 # MONTHLY REPORT
 # =========================
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def monthly_report(request):
+
     shop = request.user.shop
-    month = int(request.GET.get("month", timezone.now().month))
-    year = int(request.GET.get("year", timezone.now().year))
+
+    month = int(
+        request.GET.get(
+            "month",
+            timezone.now().month
+        )
+    )
+
+    year = int(
+        request.GET.get(
+            "year",
+            timezone.now().year
+        )
+    )
 
     sales = Sale.objects.filter(
         shop=shop,
@@ -185,13 +218,14 @@ def monthly_report(request):
         created_at__month=month
     )
 
-    # 📊 إجمالي
-    total = sales.aggregate(total=Sum("total"))["total"] or 0
+    total = sales.aggregate(
+        total=Sum("total")
+    )["total"] or 0
+
     count = sales.count()
 
     average = total / count if count > 0 else 0
 
-    # 📈 رسم يومي
     chart = (
         sales
         .annotate(day=TruncHour("created_at"))
@@ -208,27 +242,18 @@ def monthly_report(request):
         for c in chart
     ]
 
-    # 🔥 أفضل يوم
-    best = sales.values("created_at__date").annotate(
-        total=Sum("total")
-    ).order_by("-total").first()
-
-    best_day = {
-        "day": str(best["created_at__date"]),
-        "total": float(best["total"])
-    } if best else None
-
     return Response({
         "total": float(total),
         "count": count,
         "average": float(average),
-        "best_day": best_day,
         "chart": chart_data
     })
+
 
 # =========================
 # INVOICES
 # =========================
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def invoices(request):
@@ -242,6 +267,11 @@ def invoices(request):
     data = []
 
     for sale in sales:
+
+        items_count = SaleItem.objects.filter(
+            sale=sale
+        ).count()
+
         data.append({
             "id": sale.id,
 
@@ -251,13 +281,16 @@ def invoices(request):
 
             "customer_name": (
                 sale.customer.name
-                if sale.customer else None
+                if sale.customer else "Walk-in"
             ),
 
             "total": float(sale.total),
+
+            "items_count": items_count
         })
 
     return Response(data)
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -272,12 +305,13 @@ def invoice_detail(request, id):
         )
 
     except Sale.DoesNotExist:
-        return Response(
-            {"error": "Not found"},
-            status=404
-        )
+        return Response({
+            "error": "Not found"
+        }, status=404)
 
-    items = SaleItem.objects.filter(sale=sale)
+    items = SaleItem.objects.filter(
+        sale=sale
+    )
 
     return Response({
 
@@ -296,6 +330,10 @@ def invoice_detail(request, id):
             sale.customer.phone
             if sale.customer else "-"
         ),
+
+        "subtotal": float(sale.subtotal),
+
+        "tax_amount": float(sale.tax_amount),
 
         "total": float(sale.total),
 
